@@ -835,6 +835,6 @@ variable "putin_khuylo" {
 
 variable "firewall_endpoint_ids" {
   description = "The identifier of the firewall endpoint that AWS Network Firewall has instantiated in the subnet. You use this to identify the firewall endpoint in the VPC route tables, when you redirect the VPC traffic through the endpoint."
-  type = list(string)
+  type        = list(string)
 }
 

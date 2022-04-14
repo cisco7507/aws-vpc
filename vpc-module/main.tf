@@ -221,7 +221,7 @@ resource "aws_route" "firewall_internet_gateway_ipv6" {
 ################################################################################
 
 resource "aws_route_table" "ingress" {
-  count = var.create_igw && local.create_vpc && length(var.protected_subnets)  > 0 ? 1 : 0
+  count  = var.create_igw && local.create_vpc && length(var.protected_subnets) > 0 ? 1 : 0
   vpc_id = local.vpc_id
 
 
@@ -233,11 +233,11 @@ resource "aws_route_table" "ingress" {
 }
 
 resource "aws_route" "ingress" {
-  count = local.create_vpc && var.create_igw && length(var.protected_subnets)   > 0 ? length(var.protected_subnets) : 0
-  route_table_id = aws_route_table.ingress[0].id
+  count                  = local.create_vpc && var.create_igw && length(var.protected_subnets) > 0 ? length(var.protected_subnets) : 0
+  route_table_id         = aws_route_table.ingress[0].id
   destination_cidr_block = element(var.protected_subnets, count.index)
-  vpc_endpoint_id = element(var.firewall_endpoint_ids, count.index)
-  
+  vpc_endpoint_id        = element(var.firewall_endpoint_ids, count.index)
+
 }
 
 
@@ -277,16 +277,16 @@ resource "aws_route_table" "protected" {
 
   vpc_id = local.vpc_id
 
-# TODO: Use separate routes 
+  # TODO: Use separate routes 
   route {
-  cidr_block = "0.0.0.0/0"
-  vpc_endpoint_id = element(var.firewall_endpoint_ids, count.index)
-}
+    cidr_block      = "0.0.0.0/0"
+    vpc_endpoint_id = element(var.firewall_endpoint_ids, count.index)
+  }
 
- route {
-    ipv6_cidr_block        = "::/0"
-    gateway_id = aws_internet_gateway.this[0].id
- }
+  route {
+    ipv6_cidr_block = "::/0"
+    gateway_id      = aws_internet_gateway.this[0].id
+  }
 
   tags = merge(
     {
@@ -382,6 +382,23 @@ resource "aws_subnet" "private" {
     var.tags,
     var.private_subnet_tags,
   )
+}
+
+resource "aws_route" "private_ipv6_egress" {
+  count = local.create_vpc && var.create_egress_only_igw && var.enable_ipv6 ? length(var.private_subnets) : 0
+
+  route_table_id              = element(aws_route_table.private[*].id, count.index)
+  destination_ipv6_cidr_block = "::/0"
+  egress_only_gateway_id      = element(aws_egress_only_internet_gateway.this[*].id, 0)
+}
+
+resource "aws_route" "private_ipv6_igw" {
+  count = local.create_vpc && var.create_egress_only_igw == false && var.enable_ipv6 && var.create_igw ? length(var.private_subnets) : 0
+
+  route_table_id              = element(aws_route_table.private[*].id, count.index)
+  destination_ipv6_cidr_block = "::/0"
+  gateway_id                  = aws_internet_gateway.this[0].id
+
 }
 
 
@@ -605,22 +622,6 @@ resource "aws_route" "private_nat_gateway" {
   }
 }
 
-resource "aws_route" "private_ipv6_egress" {
-  count = local.create_vpc && var.create_egress_only_igw && var.enable_ipv6 ? length(var.private_subnets) : 0
-
-  route_table_id              = element(aws_route_table.private[*].id, count.index)
-  destination_ipv6_cidr_block = "::/0"
-  egress_only_gateway_id      = element(aws_egress_only_internet_gateway.this[*].id, 0)
-}
-
-resource "aws_route" "private_ipv6_igw" {
-  count = local.create_vpc && var.create_egress_only_igw == false && var.enable_ipv6 && var.create_igw ? length(var.private_subnets) : 0
-
-  route_table_id = element(aws_route_table.private[*].id, count.index)
-  destination_ipv6_cidr_block = "::/0"
-  gateway_id = aws_internet_gateway.this[0].id
-  
-}
 
 ################################################################################
 # Route table association
@@ -654,11 +655,11 @@ resource "aws_route_table_association" "firewall" {
 }
 
 resource "aws_route_table_association" "ingress" {
-  count = local.create_vpc && var.create_igw == true ? 1: 0
+  count = local.create_vpc && var.create_igw == true ? 1 : 0
   #count = 1
-  gateway_id = aws_internet_gateway.this[0].id
+  gateway_id     = aws_internet_gateway.this[0].id
   route_table_id = aws_route_table.ingress[0].id
-  
+
 }
 
 ################################################################################

@@ -26,7 +26,7 @@ resource "aws_networkfirewall_firewall" "this_firewall" {
   name                = var.firewall_name
   firewall_policy_arn = aws_networkfirewall_firewall_policy.test.arn
   vpc_id              = var.vpc_id
-  description = var.firewall_description
+  description         = var.firewall_description
 
   dynamic "subnet_mapping" {
     for_each = var.firewall_subnets[*]

@@ -125,7 +125,7 @@ output "protected_route_table_ids" {
 
 output "mapping_of_ingress_routes_to_firewall_endpoints" {
   description = "List of IDs of ingress route table"
-  value       = [for i in flatten([for route_attr in aws_route_table.ingress[*].route: route_attr]): join(":", i.*.cidr_block, i.*.vpc_endpoint_id) ]
+  value       = [for i in flatten([for route_attr in aws_route_table.ingress[*].route : route_attr]) : join(":", i.*.cidr_block, i.*.vpc_endpoint_id)]
 }
 
 output "firewall_internet_gateway_route_id" {

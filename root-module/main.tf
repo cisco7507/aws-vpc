@@ -48,6 +48,11 @@ module "vpc" {
       "ip_address" = "66.199.183.4"
       "device_name" = "ON1-ASA" 
     }
+    "Office" = {
+      "bgp_asn" = "21775"
+      "ip_address" = "199.15.87.4"
+      "device_name" = "FTD"
+    }
   }
   customer_gateway_tags = {
     Name = "ON1-ASA-cgw"

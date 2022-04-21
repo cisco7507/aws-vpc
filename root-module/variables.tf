@@ -15,3 +15,35 @@ variable "firewall_description" {
   default     = ""
 }
 
+variable "customer_gateways" {
+  description = "Maps of Customer Gateway's attributes (BGP ASN and Gateway's Internet-routable external IP address)"
+  default = {
+    ON1 = {
+      "bgp_asn"     = "21775"
+      "ip_address"  = "66.199.183.4"
+      "device_name" = "ON1-ASA"
+    }
+    Office = {
+      "bgp_asn"     = "21775"
+      "ip_address"  = "199.15.87.4"
+      "device_name" = "FTD"
+
+    }
+  }
+}
+
+variable "tags" {
+  description = "A map of tags to add to all resources"
+  default = {
+    "Owner"       = "user"
+    "Environment" = "dev"
+  }
+}
+
+variable "vpc_tags" {
+  description = "Additional tags for the VPC"
+  default = {
+    Name = "on1-dr-vpc"
+  }
+
+}

@@ -747,3 +747,12 @@ variable "firewall_endpoint_ids" {
   type        = list(string)
 }
 
+variable "private_subnets_mapping" {
+  description = "Mapping of CIDR to Subnet name"
+  type = list(string)
+}
+
+variable "subnets_prefix" {
+  description = "Prefix to Subnet name"
+  type = string
+}

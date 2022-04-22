@@ -12,7 +12,7 @@ variable "firewall_name" {
 
 variable "firewall_description" {
   description = "(Optional) A friendly description of the firewall."
-  default     = ""
+  default     = "Perimeter Firewall"
 }
 
 variable "customer_gateways" {

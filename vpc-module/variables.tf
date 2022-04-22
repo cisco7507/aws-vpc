@@ -91,7 +91,7 @@ variable "protected_subnet_suffix" {
 variable "private_subnet_suffix" {
   description = "Suffix to append to private subnets name"
   type        = string
-  default     = "private"
+  default     = ""
 }
 
 variable "firewall_subnets" {
@@ -471,7 +471,7 @@ variable "manage_default_network_acl" {
 variable "default_network_acl_name" {
   description = "Name to be used on the Default Network ACL"
   type        = string
-  default     = null
+  default     = "default-acl"
 }
 
 variable "default_network_acl_tags" {

@@ -14,3 +14,7 @@ output "firewall_endpoint_ids" {
   value       = try([for ss in tolist(aws_networkfirewall_firewall.this_firewall.firewall_status[0].sync_states) : ss.attachment[0].endpoint_id], "")
 }
 
+output "firewall_output_complete" {
+  description = "Debug output"
+  value = try(aws_networkfirewall_firewall.this_firewall.firewall_status, "")
+}

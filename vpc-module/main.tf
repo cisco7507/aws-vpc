@@ -77,7 +77,7 @@ resource "aws_default_security_group" "this" {
   }
 
   tags = merge(
-    { "Name" = coalesce(var.default_security_group_name, var.name) },
+    { "Name" = coalesce(var.default_security_group_name, var.name, "sg") },
     var.tags,
     var.default_security_group_tags
   )
@@ -97,7 +97,7 @@ resource "aws_vpc_dhcp_options" "this" {
   netbios_node_type    = var.dhcp_options_netbios_node_type
 
   tags = merge(
-    { "Name" = var.name },
+    { "Name" = coalesce(var.name, "dhcp-option-set" ) },
     var.tags,
     var.dhcp_options_tags
   )
@@ -120,7 +120,7 @@ resource "aws_internet_gateway" "this" {
   vpc_id = local.vpc_id
 
   tags = merge(
-    { "Name" = var.name },
+    { "Name" = var.name != "" ? "${var.name}-${var.vpc_tags.Name}-igw" : "${var.vpc_tags.Name}-igw"} ,
     var.tags,
     var.igw_tags
   )
@@ -132,7 +132,7 @@ resource "aws_egress_only_internet_gateway" "this" {
   vpc_id = local.vpc_id
 
   tags = merge(
-    { "Name" = var.name },
+    { "Name" = coalesce(var.name, var.vpc_tags.Name != null ? "${var.vpc_tags.Name}-eigw": "eigw") },
     var.tags,
     var.igw_tags
   )
@@ -173,7 +173,7 @@ resource "aws_default_route_table" "default" {
   }
 
   tags = merge(
-    { "Name" = coalesce(var.default_route_table_name, var.name) },
+    { "Name" = coalesce(var.name, var.default_route_table_name, "default-route-table") },
     var.tags,
     var.default_route_table_tags
   )
@@ -189,7 +189,9 @@ resource "aws_route_table" "firewall" {
   vpc_id = local.vpc_id
 
   tags = merge(
-    { "Name" = "${var.name}-${var.firewall_subnet_suffix}" },
+    { 
+      "Name" = var.name !="" ? "rt-${var.name}-${var.firewall_subnet_suffix}": "rt-${var.firewall_subnet_suffix}"
+      },
     var.tags,
     var.firewall_route_table_tags,
   )
@@ -226,7 +228,7 @@ resource "aws_route_table" "ingress" {
 
 
   tags = merge(
-    { "Name" = "igw-ingress-rt" },
+    { "Name" = "rt-igw-ingress" },
     var.tags,
     var.ingress_route_table_tags,
   )
@@ -253,9 +255,9 @@ resource "aws_route_table" "private" {
 
   tags = merge(
     {
-      "Name" = var.single_nat_gateway ? "${var.name}-${var.private_subnet_suffix}" : format(
-        "${var.name}-${var.private_subnet_suffix}-%s",
-        element(var.azs, count.index),
+      "Name" = var.single_nat_gateway ? "rt-${var.name}-rt-private" : format(
+       var.name != "" ? "rt-${var.name}-private-%s": "rt-private-%s" ,
+        element(var.azs, count.index)
       )
     },
     var.tags,
@@ -290,8 +292,8 @@ resource "aws_route_table" "protected" {
 
   tags = merge(
     {
-      "Name" = var.single_nat_gateway ? "${var.name}-${var.protected_subnet_suffix}" : format(
-        "${var.name}-${var.protected_subnet_suffix}-%s",
+      "Name" = var.single_nat_gateway ? "rt-${var.name}-rt-protected" : format(
+        var.name != "" ? "rt-${var.name}-protected-%s": "rt-protected-%s",
         element(var.azs, count.index),
       )
     },
@@ -375,7 +377,8 @@ resource "aws_subnet" "private" {
     tags = merge(
     {
       "Name" = format(
-        "${var.subnets_prefix}-${var.private_subnet_suffix}-${element(var.private_subnets_mapping, count.index)}-%s",
+        var.private_subnet_suffix != "" ?
+        "${var.subnets_prefix}-${element(var.private_subnets_mapping, count.index)}-${var.private_subnet_suffix}-%s": "${var.subnets_prefix}-${element(var.private_subnets_mapping, count.index)}-%s",
         element(var.azs, count.index),
       )
     },
@@ -468,7 +471,9 @@ resource "aws_network_acl" "firewall" {
   subnet_ids = aws_subnet.firewall[*].id
 
   tags = merge(
-    { "Name" = "${var.name}-${var.firewall_subnet_suffix}" },
+    { 
+      "Name" = var.name != "" ? "${var.name}-acl-${var.firewall_subnet_suffix}" : "acl-${var.firewall_subnet_suffix}" 
+      },
     var.tags,
     var.firewall_acl_tags
   )
@@ -519,7 +524,9 @@ resource "aws_network_acl" "private" {
   subnet_ids = aws_subnet.private[*].id
 
   tags = merge(
-    { "Name" = "${var.name}-${var.private_subnet_suffix}" },
+    {
+       "Name" = var.name != "" ? "${var.name}-acl-${var.private_subnet_suffix}" : "acl-${var.private_subnet_suffix}" 
+       },
     var.tags,
     var.private_acl_tags
   )
@@ -575,8 +582,7 @@ resource "aws_eip" "nat" {
   tags = merge(
     {
       "Name" = format(
-        "${var.name}-%s",
-        element(var.azs, var.single_nat_gateway ? 0 : count.index),
+        var.name != "" ? "${var.name}-%s": "eip-%s",element(var.azs, var.single_nat_gateway ? 0 : count.index)
       )
     },
     var.tags,
@@ -600,8 +606,7 @@ resource "aws_nat_gateway" "this" {
   tags = merge(
     {
       "Name" = format(
-        "${var.name}-%s",
-        element(var.azs, var.single_nat_gateway ? 0 : count.index),
+        var.name != "" ? "${var.name}-%s" : "nat-gw-%s", element(var.azs, var.single_nat_gateway ? 0 : count.index),
       )
     },
     var.tags,
@@ -677,7 +682,9 @@ resource "aws_customer_gateway" "this" {
   type        = "ipsec.1"
 
   tags = merge(
-    { Name = "${var.name}-${each.key}" },
+    {
+       Name = var.name != "" ? "cgw-${var.name}-${each.key}" : "cgw-${each.key}" 
+       },
     var.tags,
     var.customer_gateway_tags
   )
@@ -695,7 +702,9 @@ resource "aws_vpn_gateway" "this" {
   availability_zone = var.vpn_gateway_az
 
   tags = merge(
-    { "Name" = var.name },
+    { 
+      "Name" = var.name != "" ? "vpn-gw-${var.name}-${var.vpc_tags.Name}" :  "vpn-gw-${var.vpc_tags.Name}"
+    },
     var.tags,
     var.vpn_gateway_tags
   )

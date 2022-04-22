@@ -8,7 +8,7 @@ module "vpc" {
   private_subnets                     = [for i in range(4, 10, 1) : cidrsubnet(var.cidr, 4, i)]
   enable_ipv6                         = true
   create_egress_only_igw              = false
-  private_subnets_mapping             = ["srs", "srs", "svc", "svc", "db", "db"]
+  private_subnets_mapping             = ["srs", "srs", "services", "services", "db", "db"]
   private_subnet_ipv6_prefixes        = [4, 5, 6, 7, 8, 9]
   protected_subnet_ipv6_prefixes      = [2, 3]
   firewall_subnet_ipv6_prefixes       = [0, 1]
@@ -21,9 +21,6 @@ module "vpc" {
   propagate_firewall_route_tables_vgw = true
   customer_gateways                   = var.customer_gateways
   vpc_tags                            = var.vpc_tags
-  customer_gateway_tags = {
-    Name = "ON1-ASA-cgw"
-  }
 }
 
 module "firewall" {
@@ -31,6 +28,6 @@ module "firewall" {
   vpc_id               = module.vpc.vpc_id
   firewall_name        = var.firewall_name
   firewall_subnets     = module.vpc.firewall_subnets
-  firewall_description = "Test Firewall-1"
+  firewall_description = var.firewall_description
 
 }

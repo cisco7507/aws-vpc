@@ -331,7 +331,7 @@ output "firewall_endpoint_ids" {
   value       = module.firewall.firewall_endpoint_ids
 }
 
-output "firewall_output_complete" {
-  description = "Debug output"
-  value =  module.firewall.firewall_output_complete
+output "firewall_endpoint_id_subnet_id_mapping" {
+  description = "The Subnet_id where the firewall vpc-endpoint is created. This is used to ensure the firewall vpc_id used for routing is associated with the route table in the corresponding AZ"
+  value       = module.firewall.firewall_endpoint_ids
 }

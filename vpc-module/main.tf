@@ -97,7 +97,7 @@ resource "aws_vpc_dhcp_options" "this" {
   netbios_node_type    = var.dhcp_options_netbios_node_type
 
   tags = merge(
-    { "Name" = coalesce(var.name, "dhcp-option-set" ) },
+    { "Name" = coalesce(var.name, "dhcp-option-set") },
     var.tags,
     var.dhcp_options_tags
   )
@@ -120,7 +120,7 @@ resource "aws_internet_gateway" "this" {
   vpc_id = local.vpc_id
 
   tags = merge(
-    { "Name" = var.name != "" ? "${var.name}-${var.vpc_tags.Name}-igw" : "${var.vpc_tags.Name}-igw"} ,
+    { "Name" = var.name != "" ? "${var.name}-${var.vpc_tags.Name}-igw" : "${var.vpc_tags.Name}-igw" },
     var.tags,
     var.igw_tags
   )
@@ -132,7 +132,7 @@ resource "aws_egress_only_internet_gateway" "this" {
   vpc_id = local.vpc_id
 
   tags = merge(
-    { "Name" = coalesce(var.name, var.vpc_tags.Name != null ? "${var.vpc_tags.Name}-eigw": "eigw") },
+    { "Name" = coalesce(var.name, var.vpc_tags.Name != null ? "${var.vpc_tags.Name}-eigw" : "eigw") },
     var.tags,
     var.igw_tags
   )
@@ -189,9 +189,9 @@ resource "aws_route_table" "firewall" {
   vpc_id = local.vpc_id
 
   tags = merge(
-    { 
-      "Name" = var.name !="" ? "rt-${var.name}-${var.firewall_subnet_suffix}": "rt-${var.firewall_subnet_suffix}"
-      },
+    {
+      "Name" = var.name != "" ? "rt-${var.name}-${var.firewall_subnet_suffix}" : "rt-${var.firewall_subnet_suffix}"
+    },
     var.tags,
     var.firewall_route_table_tags,
   )
@@ -225,20 +225,22 @@ resource "aws_route" "firewall_internet_gateway_ipv6" {
 resource "aws_route_table" "ingress" {
   count  = var.create_igw && local.create_vpc && length(var.protected_subnets) > 0 ? 1 : 0
   vpc_id = local.vpc_id
-
-
   tags = merge(
     { "Name" = "rt-igw-ingress" },
     var.tags,
     var.ingress_route_table_tags,
   )
+  depends_on = [
+    aws_subnet.protected
+  ]
 }
 
 resource "aws_route" "ingress" {
-  count                  = local.create_vpc && var.create_igw && length(var.protected_subnets) > 0 ? length(var.protected_subnets) : 0
+  count                  = local.create_vpc && var.create_igw && length(var.firewall_subnets) > 0 ? length(var.firewall_subnets) : 0
   route_table_id         = aws_route_table.ingress[0].id
   destination_cidr_block = element(var.protected_subnets, count.index)
-  vpc_endpoint_id        = element(var.firewall_endpoint_ids, count.index)
+  # Force the vpc firewall endpoint's AZ to be associated with the fw subnet in the same/corresponding AZ 
+  vpc_endpoint_id = aws_subnet.firewall.*.id[count.index] == var.firewall_endpoint_id_subnet_id_mapping[count.index] ? var.firewall_endpoint_ids[count.index] : element(var.firewall_endpoint_ids, count.index + 1)
 
 }
 
@@ -256,7 +258,7 @@ resource "aws_route_table" "private" {
   tags = merge(
     {
       "Name" = var.single_nat_gateway ? "rt-${var.name}-rt-private" : format(
-       var.name != "" ? "rt-${var.name}-private-%s": "rt-private-%s" ,
+        var.name != "" ? "rt-${var.name}-private-%s" : "rt-private-%s",
         element(var.azs, count.index)
       )
     },
@@ -264,10 +266,6 @@ resource "aws_route_table" "private" {
     var.private_route_table_tags
   )
 }
-
-
-
-
 
 ################################################################################
 # Protected routes
@@ -279,27 +277,32 @@ resource "aws_route_table" "protected" {
 
   vpc_id = local.vpc_id
 
-  # TODO: Use separate routes 
-  route {
-    cidr_block      = "0.0.0.0/0"
-    vpc_endpoint_id = element(var.firewall_endpoint_ids, count.index)
-  }
-
-  route {
-    ipv6_cidr_block = "::/0"
-    gateway_id      = aws_internet_gateway.this[0].id
-  }
-
   tags = merge(
     {
       "Name" = var.single_nat_gateway ? "rt-${var.name}-rt-protected" : format(
-        var.name != "" ? "rt-${var.name}-protected-%s": "rt-protected-%s",
+        var.name != "" ? "rt-${var.name}-protected-%s" : "rt-protected-%s",
         element(var.azs, count.index),
       )
     },
     var.tags,
     var.protected_route_table_tags
   )
+}
+
+resource "aws_route" "protected" {
+  count                  = local.create_vpc && var.create_igw && length(var.protected_subnets) > 0 ? length(var.protected_subnets) : 0
+  route_table_id         = aws_route_table.protected.* [count.index].id
+  destination_cidr_block = "0.0.0.0/0"
+  # Force the vpc firewall endpoint's AZ to be associated with the fw subnet in the same/corresponding AZ 
+  vpc_endpoint_id = aws_subnet.firewall.*.id[count.index] == var.firewall_endpoint_id_subnet_id_mapping[count.index] ? var.firewall_endpoint_ids[count.index] : element(var.firewall_endpoint_ids, count.index + 1)
+
+}
+
+resource "aws_route" "protected_v6" {
+  count                       = local.create_vpc && var.create_egress_only_igw == false && var.enable_ipv6 && var.create_igw ? length(var.protected_subnets) : 0
+  route_table_id              = aws_route_table.protected[0].id
+  destination_ipv6_cidr_block = "::/0"
+  gateway_id                  = aws_internet_gateway.this[0].id
 }
 
 ################################################################################
@@ -367,18 +370,18 @@ resource "aws_subnet" "private" {
   count = local.create_vpc && length(var.private_subnets) > 0 ? length(var.private_subnets) : 0
 
   vpc_id                          = local.vpc_id
-  cidr_block                      = var.private_subnets[count.index] 
+  cidr_block                      = var.private_subnets[count.index]
   availability_zone               = length(regexall("^[a-z]{2}-", element(var.azs, count.index))) > 0 ? element(var.azs, count.index) : null
   availability_zone_id            = length(regexall("^[a-z]{2}-", element(var.azs, count.index))) == 0 ? element(var.azs, count.index) : null
   assign_ipv6_address_on_creation = var.private_subnet_assign_ipv6_address_on_creation == null ? var.assign_ipv6_address_on_creation : var.private_subnet_assign_ipv6_address_on_creation
 
   ipv6_cidr_block = var.enable_ipv6 && length(var.private_subnet_ipv6_prefixes) > 0 ? cidrsubnet(aws_vpc.this[0].ipv6_cidr_block, 8, var.private_subnet_ipv6_prefixes[count.index]) : null
 
-    tags = merge(
+  tags = merge(
     {
       "Name" = format(
         var.private_subnet_suffix != "" ?
-        "${var.subnets_prefix}-${element(var.private_subnets_mapping, count.index)}-${var.private_subnet_suffix}-%s": "${var.subnets_prefix}-${element(var.private_subnets_mapping, count.index)}-%s",
+        "${var.subnets_prefix}-${element(var.private_subnets_mapping, count.index)}-${var.private_subnet_suffix}-%s" : "${var.subnets_prefix}-${element(var.private_subnets_mapping, count.index)}-%s",
         element(var.azs, count.index),
       )
     },
@@ -471,9 +474,9 @@ resource "aws_network_acl" "firewall" {
   subnet_ids = aws_subnet.firewall[*].id
 
   tags = merge(
-    { 
-      "Name" = var.name != "" ? "${var.name}-acl-${var.firewall_subnet_suffix}" : "acl-${var.firewall_subnet_suffix}" 
-      },
+    {
+      "Name" = var.name != "" ? "${var.name}-acl-${var.firewall_subnet_suffix}" : "acl-${var.firewall_subnet_suffix}"
+    },
     var.tags,
     var.firewall_acl_tags
   )
@@ -525,8 +528,8 @@ resource "aws_network_acl" "private" {
 
   tags = merge(
     {
-       "Name" = var.name != "" ? "${var.name}-acl-${var.private_subnet_suffix}" : "acl-${var.private_subnet_suffix}" 
-       },
+      "Name" = var.name != "" ? "${var.name}-acl-${var.private_subnet_suffix}" : "acl-${var.private_subnet_suffix}"
+    },
     var.tags,
     var.private_acl_tags
   )
@@ -582,7 +585,7 @@ resource "aws_eip" "nat" {
   tags = merge(
     {
       "Name" = format(
-        var.name != "" ? "${var.name}-%s": "eip-%s",element(var.azs, var.single_nat_gateway ? 0 : count.index)
+        var.name != "" ? "${var.name}-%s" : "eip-%s", element(var.azs, var.single_nat_gateway ? 0 : count.index)
       )
     },
     var.tags,
@@ -683,8 +686,8 @@ resource "aws_customer_gateway" "this" {
 
   tags = merge(
     {
-       Name = var.name != "" ? "cgw-${var.name}-${each.key}" : "cgw-${each.key}" 
-       },
+      Name = var.name != "" ? "cgw-${var.name}-${each.key}" : "cgw-${each.key}"
+    },
     var.tags,
     var.customer_gateway_tags
   )
@@ -702,8 +705,8 @@ resource "aws_vpn_gateway" "this" {
   availability_zone = var.vpn_gateway_az
 
   tags = merge(
-    { 
-      "Name" = var.name != "" ? "vpn-gw-${var.name}-${var.vpc_tags.Name}" :  "vpn-gw-${var.vpc_tags.Name}"
+    {
+      "Name" = var.name != "" ? "vpn-gw-${var.name}-${var.vpc_tags.Name}" : "vpn-gw-${var.vpc_tags.Name}"
     },
     var.tags,
     var.vpn_gateway_tags

@@ -747,12 +747,17 @@ variable "firewall_endpoint_ids" {
   type        = list(string)
 }
 
+variable "firewall_endpoint_id_subnet_id_mapping" {
+  description = "The Subnet_id where the firewall vpc-endpoint is created. This is used to ensure the firewall vpc_id used for routing is associated with the route table in the corresponding subnet"
+  type        = list(string)
+}
+
 variable "private_subnets_mapping" {
   description = "Mapping of CIDR to Subnet name"
-  type = list(string)
+  type        = list(string)
 }
 
 variable "subnets_prefix" {
   description = "Prefix to Subnet name"
-  type = string
+  type        = string
 }

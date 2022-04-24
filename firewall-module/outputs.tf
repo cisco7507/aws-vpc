@@ -15,7 +15,7 @@ output "firewall_endpoint_ids" {
 }
 
 output "firewall_endpoint_id_subnet_id_mapping" {
-  description = "The Subnet_id where the firewall vpc-endpoint is created. This is used to ensure the firewall vpc_id used for routing is associated with the route table in the corresponding AZ"
+  description = "The Subnet_id where the firewall vpc-endpoint is created. Use this along with firewall_endpoint_ids to ensure the firewall vpc_id used for routing is associated with the route table in the corresponding AZ"
   value       = try([for i in [for ss in tolist(aws_networkfirewall_firewall.this_firewall.firewall_status[0].sync_states) : ss.attachment[0]] : i][*].subnet_id, "")
 }
 

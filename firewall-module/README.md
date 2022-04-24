@@ -37,7 +37,7 @@ No modules.
 | Name | Description |
 |------|-------------|
 | <a name="output_firewall_arn"></a> [firewall\_arn](#output\_firewall\_arn) | The Amazon Resource Name (ARN) that identifies the firewall. |
-| <a name="output_firewall_endpoint_id_subnet_id_mapping"></a> [firewall\_endpoint\_id\_subnet\_id\_mapping](#output\_firewall\_endpoint\_id\_subnet\_id\_mapping) | The Subnet\_id where the firewall vpc-endpoint is created. This is used to ensure the firewall vpc\_id used for routing is associated with the route table in the corresponding AZ |
-| <a name="output_firewall_endpoint_ids"></a> [firewall\_endpoint\_ids](#output\_firewall\_endpoint\_ids) | The identifier of the firewall endpoint that AWS Network Firewall has instantiated in the subnet. You use this along with "firewall\_endpoint\_id\_subnet\_id\_mapping" to identify the firewall endpoint in the VPC route tables, when you redirect the VPC traffic through the endpoint. |
+| <a name="output_firewall_endpoint_id_subnet_id_mapping"></a> [firewall\_endpoint\_id\_subnet\_id\_mapping](#output\_firewall\_endpoint\_id\_subnet\_id\_mapping) | The Subnet\_id where the firewall vpc-endpoint is created. Use this along with firewall\_endpoint\_ids (#output\_firewall\_endpoint\_ids) to ensure the firewall vpc\_id used for routing is associated with the route table in the corresponding AZ |
+| <a name="output_firewall_endpoint_ids"></a> [firewall\_endpoint\_ids](#output\_firewall\_endpoint\_ids) | The identifier of the firewall endpoint that AWS Network Firewall has instantiated in the subnet. You use this along with firewall\_endpoint\_id\_subnet\_id\_mapping (#output\_firewall\_endpoint\_id\_subnet\_id\_mapping) to identify the firewall endpoint in the VPC route tables, when you redirect the VPC traffic through the endpoint. |
 | <a name="output_firewall_id"></a> [firewall\_id](#output\_firewall\_id) | The Amazon Resource Name (ARN) that identifies the firewall. |
 <!-- END_TF_DOCS -->

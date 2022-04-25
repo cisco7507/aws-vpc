@@ -753,7 +753,7 @@ variable "firewall_endpoint_id_subnet_id_mapping" {
 }
 
 variable "private_subnets_mapping" {
-  description = "Mapping of CIDR to Subnet name"
+  description = "Ordered list of subnet names. The order should be set to match the output of the private_subnets variable, as established by its CIDR function, i.e the first CIDR block returned by the function will cause the subnet to be named as per the first value of the private_subnets_mapping (this variable) and so on."
   type        = list(string)
 }
 

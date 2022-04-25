@@ -1,15 +1,3 @@
-locals {
-  max_subnet_length = max(
-    length(var.private_subnets)
-  )
-  nat_gateway_count = var.single_nat_gateway ? 1 : var.one_nat_gateway_per_az ? length(var.azs) : local.max_subnet_length
-
-  # Use `local.vpc_id` to give a hint to Terraform that subnets should be deleted before secondary CIDR blocks can be free!
-  vpc_id = try(aws_vpc_ipv4_cidr_block_association.this[0].vpc_id, aws_vpc.this[0].id, "")
-
-  create_vpc = var.create_vpc
-}
-
 ################################################################################
 # VPC
 ################################################################################
@@ -239,7 +227,7 @@ resource "aws_route" "ingress" {
   count                  = local.create_vpc && var.create_igw && length(var.firewall_subnets) > 0 ? length(var.firewall_subnets) : 0
   route_table_id         = aws_route_table.ingress[0].id
   destination_cidr_block = element(var.protected_subnets, count.index)
-  # Force the vpc firewall endpoint's AZ to be associated with the fw subnet in the same/corresponding AZ 
+  # Force the firewall VPC endpoint's AZ to be associated with the fw subnet in the same/corresponding AZ 
   vpc_endpoint_id = aws_subnet.firewall.*.id[count.index] == var.firewall_endpoint_id_subnet_id_mapping[count.index] ? var.firewall_endpoint_ids[count.index] : element(var.firewall_endpoint_ids, count.index + 1)
 
 }
@@ -293,7 +281,7 @@ resource "aws_route" "protected" {
   count                  = local.create_vpc && var.create_igw && length(var.protected_subnets) > 0 ? length(var.protected_subnets) : 0
   route_table_id         = aws_route_table.protected.* [count.index].id
   destination_cidr_block = "0.0.0.0/0"
-  # Force the vpc firewall endpoint's AZ to be associated with the fw subnet in the same/corresponding AZ 
+  # Force the firewall VPC endpoint's AZ to be associated with the fw subnet in the same/corresponding AZ 
   vpc_endpoint_id = aws_subnet.firewall.*.id[count.index] == var.firewall_endpoint_id_subnet_id_mapping[count.index] ? var.firewall_endpoint_ids[count.index] : element(var.firewall_endpoint_ids, count.index + 1)
 
 }
@@ -572,10 +560,6 @@ resource "aws_network_acl_rule" "private_outbound" {
 ################################################################################
 # NAT Gateway
 ################################################################################
-
-locals {
-  nat_gateway_ips = var.reuse_nat_ips ? var.external_nat_ip_ids : try(aws_eip.nat[*].id, [])
-}
 
 resource "aws_eip" "nat" {
   count = local.create_vpc && var.enable_nat_gateway && false == var.reuse_nat_ips ? local.nat_gateway_count : 0

@@ -17,7 +17,7 @@ resource "aws_networkfirewall_firewall_policy" "test" {
 
   firewall_policy {
     stateless_default_actions          = ["aws:pass"]
-    stateless_fragment_default_actions = ["aws:drop"]
+    stateless_fragment_default_actions = ["aws:pass"]
 
   }
 }
